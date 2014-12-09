@@ -110,48 +110,52 @@ void process_stack(bam1_t **reads, int nreads, bam_hdr_t *header, int max_read_l
 
 void usage(char *prog) {
     printf("Usage: samtools view -h file.bam | %s [OPTIONS] output.bam\n", prog);
-    printf("\n\
-The problem:\n\
-Reads originating from short RNAs often map equally well to multiple\n\
-transcripts, but we would ideally like to assign them to only one transcript. To\n\
-do so, we can utilize the fact that reads are often longer than the transcripts\n\
-(even after trimming).\n\
-\n\
-An example:\n\
-Suppose a read aligns equally well to three transcripts.\n\
-\n\
-|+++++++++++++++++++++++++++++???????????????| The original read\n\
-|+++++++++++++++++++++++++++++| The trimmed read\n\
-|--------------------------------| Transcript A\n\
-|-------------------------------------| Transcript B\n\
-|-----------------------------| Transcript C\n\
-\n\
-Given how trimming works, it's most likely tha the read arose from transcript C.\n\
-We will asign a read to a single transcript if and only if its bounds exactly\n\
-match that of a single transcript to which it can match. Further, the reads\n\
-length can't be more than 90%% of it's untrimmed length. This is to limit false-\n\
-positive assignments due to a ambiguity about whether the read actually contains\n\
-the entirety of the sequence of the transcript from which it arose. Thus, the\n\
-following example would not be assigned to a transcript:\n\
-\n\
-|+++++++++++++++++++++++++++++?| The original read\n\
-|+++++++++++++++++++++++++++++| The trimmed read\n\
-|--------------------------------| Transcript A\n\
-|-------------------------------------| Transcript B\n\
-|-----------------------------| Transcript C\n\
-\n\
-It should be noted that an assignment will not be made to a transcript it if\n\
-requires reverse-complement mapping, due to the strand-specific nature of the\n\
-library-prep.\n\
-\n\
-Options\n\
-\n\
--L	The original read length (default 50).\n\
-\n\
--@	Number of compression threads (default 1).\n\
-\n\
---keep-multi	If set, then reads that can't be assigned to a single transcript\n\
-	will be output as is rather than being discarded.\n");
+    printf("\n"
+"This program takes a SAM or BAM file containing small RNA alignments and\n"
+"attempts to assign them to their most likely targets, given the transcript and\n"
+"initial read length.\n"
+"\n"
+"The problem:\n"
+"Reads originating from short RNAs often map equally well to multiple\n"
+"transcripts, but we would ideally like to assign them to only one transcript. To\n"
+"do so, we can utilize the fact that reads are often longer than the transcripts\n"
+"(even after trimming).\n"
+"\n"
+"An example:\n"
+"Suppose a read aligns equally well to three transcripts.\n"
+"\n"
+"|+++++++++++++++++++++++++++++???????????????| The original read\n"
+"|+++++++++++++++++++++++++++++| The trimmed read\n"
+"|--------------------------------| Transcript A\n"
+"|-------------------------------------| Transcript B\n"
+"|-----------------------------| Transcript C\n"
+"\n"
+"Given how trimming works, it's most likely tha the read arose from transcript C.\n"
+"We will asign a read to a single transcript if and only if its bounds exactly\n"
+"match that of a single transcript to which it can match. Further, the reads\n"
+"length can't be more than 90%% of it's untrimmed length. This is to limit false-\n"
+"positive assignments due to a ambiguity about whether the read actually contains\n"
+"the entirety of the sequence of the transcript from which it arose. Thus, the\n"
+"following example would not be assigned to a transcript:\n"
+"\n"
+"|+++++++++++++++++++++++++++++?| The original read\n"
+"|+++++++++++++++++++++++++++++| The trimmed read\n"
+"|--------------------------------| Transcript A\n"
+"|-------------------------------------| Transcript B\n"
+"|-----------------------------| Transcript C\n"
+"\n"
+"It should be noted that an assignment will not be made to a transcript it if\n"
+"requires reverse-complement mapping, due to the strand-specific nature of the\n"
+"library-prep.\n"
+"\n"
+"Options\n"
+"\n"
+"-L	The original read length (default 50).\n"
+"\n"
+"-@	Number of compression threads (default 1).\n"
+"\n"
+"--keep-multi	If set, then reads that can't be assigned to a single transcript\n"
+"	will be output as is rather than being discarded.\n");
 }
 
 int main(int argc, char *argv[]) {

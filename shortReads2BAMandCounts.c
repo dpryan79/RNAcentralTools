@@ -171,45 +171,62 @@ int process_stack(bam1_t **reads, int nreads, bam_hdr_t *header, int32_t *BAM2Cl
 
 void usage(char *prog) {
     printf("Usage: samtools view -h file.bam | %s [OPTIONS] RNA2Cluster.txt output_prefix\n", prog);
-    printf("\n\
-The problem:\n\
-Reads originating from short RNAs often map equally well to multiple\n\
-transcripts, but we would ideally like to assign them to only one transcript. To\n\
-do so, we can utilize the fact that reads are often longer than the transcripts\n\
-(even after trimming).\n\
-\n\
-An example:\n\
-Suppose a read aligns equally well to three transcripts.\n\
-\n\
-|+++++++++++++++++++++++++++++???????????????| The original read\n\
-|+++++++++++++++++++++++++++++| The trimmed read\n\
-|--------------------------------| Transcript A\n\
-|-------------------------------------| Transcript B\n\
-|-----------------------------| Transcript C\n\
-\n\
-Given how trimming works, it's most likely tha the read arose from transcript C.\n\
-We will asign a read to a single transcript if and only if its bounds exactly\n\
-match that of a single transcript to which it can match. Further, the reads\n\
-length can't be more than 90%% of it's untrimmed length. This is to limit false-\n\
-positive assignments due to a ambiguity about whether the read actually contains\n\
-the entirety of the sequence of the transcript from which it arose. Thus, the\n\
-following example would not be assigned to a transcript:\n\
-\n\
-|+++++++++++++++++++++++++++++?| The original read\n\
-|+++++++++++++++++++++++++++++| The trimmed read\n\
-|--------------------------------| Transcript A\n\
-|-------------------------------------| Transcript B\n\
-|-----------------------------| Transcript C\n\
-\n\
-It should be noted that an assignment will not be made to a transcript it if\n\
-requires reverse-complement mapping, due to the strand-specific nature of the\n\
-library-prep.\n\
-\n\
-Options\n\
-\n\
--L	The original read length (default 50).\n\
-\n\
--@	Number of compression threads (default 1).\n");
+    printf("\n"
+"Take alignments in SAM or BAM format and assign them (if possible) to individual\n"
+"transcripts and clusters. Two output files are produced: 'output_prefix.bam',\n"
+"containing the alignments that were assigned to clusters; and\n"
+"'output_prefix.txt', which contains the count of unique alignments to each\n"
+"cluster.\n"
+"\n"
+"N.B., The file 'RNA2Cluster.txt' can be generated with the\n"
+"cd-hit-est_annotate.py script.\n"
+"\n"
+"The problem:\n"
+"Reads originating from short RNAs often map equally well to multiple\n"
+"transcripts, but we would ideally like to assign them to only one transcript\n"
+"(and even if not we'd at least like to assign them to a single cluster of\n"
+"transcripts). To do so, we can utilize the fact that reads are often longer than\n"
+"the transcripts to which they align...even after trimming.\n"
+"\n"
+"An example:\n"
+"Suppose a read aligns equally well to three transcripts.\n"
+"\n"
+"|+++++++++++++++++++++++++++++???????????????| The original read\n"
+"|+++++++++++++++++++++++++++++| The trimmed read\n"
+"|--------------------------------| Transcript A\n"
+"|-------------------------------------| Transcript B\n"
+"|-----------------------------| Transcript C\n"
+"\n"
+"Given how trimming works, it's most likely tha the read arose from transcript C.\n"
+"We will asign a read to a single transcript if and only if its bounds exactly\n"
+"match that of a single transcript to which it can match. Further, the reads\n"
+"length can't be more than 90%% of it's untrimmed length. This is to limit false-\n"
+"positive assignments due to a ambiguity about whether the read actually contains\n"
+"the entirety of the sequence of the transcript from which it arose. Thus, the\n"
+"following example would not be assigned to a transcript:\n"
+"\n"
+"|+++++++++++++++++++++++++++++?| The original read\n"
+"|+++++++++++++++++++++++++++++| The trimmed read\n"
+"|--------------------------------| Transcript A\n"
+"|-------------------------------------| Transcript B\n"
+"|-----------------------------| Transcript C\n"
+"\n"
+"It should be noted that an assignment will not be made to a transcript it if\n"
+"requires reverse-complement mapping, due to the strand-specific nature of the\n"
+"library-prep.\n"
+"\n"
+"Regardless of whether a given read can be assigned to a single transcript or\n"
+"not, this program will also then attempt to assign it to a single cluster. It\n"
+"will only do so if all of the assigned targets are annotated as being in the\n"
+"same cluster. For convenience, this program will keep track of how many times it\n"
+"assigns reads to each cluster, as this can then be used for differential\n"
+"expression.\n"
+"\n"
+"Options:\n"
+"\n"
+"-L	The original read length (default 50).\n"
+"\n"
+"-@	Number of compression threads (default 1).\n");
 }
 
 int main(int argc, char *argv[]) {

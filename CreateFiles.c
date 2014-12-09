@@ -1,19 +1,22 @@
 //gcc -Wall -o CreateFiles CreateFiles.c
+//Need to make the file names variable!
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <inttypes.h>
 #define MAXENSEMBL 103000
 #define MAXRNACENTRAL 0x7B9A1C+1
 #define MAXGO 2001312
 #define MAXCLUSTERS 52583
+#define MAXLINE 1024
 
 typedef struct {
-    int *GO;
-    int l,m;
+    int32_t *GO;
+    int32_t l,m;
 } GOstruct;
 
-int roundup32(int n) {
+int32_t roundup32(int32_t n) {
     n |= n >> 1;
     n |= n >> 2;
     n |= n >> 4;
@@ -23,19 +26,35 @@ int roundup32(int n) {
     return n;
 }
 
-int in(int val, int *list, int len) {
-    int i;
-    for(i=0; i<len; i++) if(list[i] == val) return 1;
+int in(int32_t val, int32_t *list, int32_t len) {
+    int32_t i;
+    for(i=0; i<len; i++) {
+        if(list[i] == val) return 1;
+    }
     return 0;
 }
 
+GOstruct ** growStruct(GOstruct **s, int32_t l, int32_t *curMax) {
+    int32_t i, newMax = roundup32(l+1);
+    s = realloc(s, sizeof(GOstruct*)*newMax);
+    assert(s);
+    for(i=*curMax; i<newMax; i++) s[i] = calloc(1, sizeof(GOstruct));
+    *curMax = newMax;
+    return s;
+}
+
 int main(int argc, char *argv[]) {
-    GOstruct **ENSEMBL2GO = calloc(MAXENSEMBL, sizeof(GOstruct *));
-    GOstruct **RNAcentral2Ensembl = calloc(MAXRNACENTRAL, sizeof(GOstruct *));
-    GOstruct **RNAcentral2GO = calloc(MAXRNACENTRAL, sizeof(GOstruct *));
-    GOstruct **Cluster2GO = calloc(MAXCLUSTERS, sizeof(GOstruct *));
-    int *piRNA = calloc(MAXCLUSTERS, sizeof(int));
-    char line[1024], *p;
+    //N.B., some values tuned for the mouse genome
+    int32_t ENSEMBL_l = 0, ENSEMBL_m = 103000;
+    int32_t RNACENTRAL_l = 0, RNACENTRAL_m = 0x7B9A1C+1;
+    int32_t CLUSTERS_l = 0, CLUSTERS_m = 52583;
+//    int32_t GO_l = 0, GO_m = 2001312;
+    GOstruct **ENSEMBL2GO = calloc(ENSEMBL_m, sizeof(GOstruct *));
+    GOstruct **RNAcentral2Ensembl = calloc(RNACENTRAL_m, sizeof(GOstruct *));
+    GOstruct **RNAcentral2GO = calloc(RNACENTRAL_m, sizeof(GOstruct *));
+    GOstruct **Cluster2GO = calloc(CLUSTERS_m, sizeof(GOstruct *));
+    int *piRNA = calloc(CLUSTERS_m, sizeof(int));
+    char line[MAXLINE], *p;
     FILE *fp;
     int i, j, k;
 
@@ -44,19 +63,17 @@ int main(int argc, char *argv[]) {
     assert(RNAcentral2GO);
 
     //Initialize structs
-    for(i=0; i<MAXENSEMBL; i++) {
+    for(i=0; i<ENSEMBL_m; i++) {
         ENSEMBL2GO[i] = calloc(1, sizeof(GOstruct));
         assert(ENSEMBL2GO[i]);
     }
-    for(i=0; i<MAXRNACENTRAL; i++) {
+    for(i=0; i<RNACENTRAL_m; i++) {
         RNAcentral2Ensembl[i] = calloc(1, sizeof(GOstruct));
         assert(RNAcentral2Ensembl[i]);
-    }
-    for(i=0; i<MAXRNACENTRAL; i++) {
         RNAcentral2GO[i] = calloc(1, sizeof(GOstruct));
         assert(RNAcentral2GO[i]);
     }
-    for(i=0; i<MAXCLUSTERS; i++) {
+    for(i=0; i<CLUSTERS_m; i++) {
         Cluster2GO[i] = calloc(1, sizeof(GOstruct));
         assert(Cluster2GO[i]);
     }
@@ -64,16 +81,15 @@ int main(int argc, char *argv[]) {
     //Load the file, keeping only unique pairings
     fprintf(stderr, "Loading Ensembl2GO.txt..."); fflush(stderr);
     fp = fopen("Ensembl2GO.txt", "r");
-    fgets(line, 1024, fp);
-    while(fgets(line, 1024, fp) != NULL) {
+    fgets(line, MAXLINE, fp);
+    while(fgets(line, MAXLINE, fp) != NULL) {
         p=strtok(line, "\t");
         i = atoi(p+7);
         p = strtok(NULL, "\n");
         p+=3;
         j = atoi(p);
         assert(j>0);
-        assert(i<MAXENSEMBL);
-        assert(j<=MAXGO);
+        if(i>=ENSEMBL2GO->m) ENSEMBL2GO = growStruct(ENSEMBL2GO, i, &ENSEMBL_m);
         if(!in(j, ENSEMBL2GO[i]->GO, ENSEMBL2GO[i]->l)) {
             ENSEMBL2GO[i]->l++;
             if(ENSEMBL2GO[i]->l >= ENSEMBL2GO[i]->m) {
@@ -90,12 +106,13 @@ int main(int argc, char *argv[]) {
     //Load the RNAcentral to Ensembl mappings
     fprintf(stderr, "Loading RNAcentral to Ensembl mappings..."); fflush(stderr);
     fp = popen("zcat merged.gz", "r");
-    fgets(line, 1024, fp);
-    while(fgets(line, 1024, fp) != NULL) {
+    fgets(line, MAXLINE, fp);
+    while(fgets(line, MAXLINE, fp) != NULL) {
         p = strtok(line, "\t");
         i = strtol(p+3, NULL, 16);
         p = strtok(NULL, "\n");
         j = atoi(p+7);
+//Got here
         if(i>=MAXRNACENTRAL) {
             fprintf(stderr, "i %X MAXRNACENTRAL %X\n", i, MAXRNACENTRAL); fflush(stderr);
         }
@@ -139,12 +156,12 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "done\n"); fflush(stderr);
 
     //Clean up ENSEMBL2GO and RNAcentral2Ensembl
-    for(i=0; i<MAXENSEMBL; i++) {
+    for(i=0; i<ENSEMBL_m; i++) {
         if(ENSEMBL2GO[i]->l) free(ENSEMBL2GO[i]->GO);
         free(ENSEMBL2GO[i]);
     }
     free(ENSEMBL2GO);
-    for(i=0; i<MAXRNACENTRAL; i++) {
+    for(i=0; i<RNACENTRAL_m; i++) {
         if(RNAcentral2Ensembl[i]->l) free(RNAcentral2Ensembl[i]->GO);
         free(RNAcentral2Ensembl[i]);
     }
